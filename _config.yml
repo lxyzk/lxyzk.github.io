@@ -80,6 +80,9 @@ theme: landscape
 # Deployment
 ## Docs: https://hexo.io/docs/deployment.html
 deploy:
-  type: git
+- type: git
   repo: git@github.com:lxyzk/lxyzk.github.io.git
+  branch: master
+- type: git
+  repo: git@git.coding.net:lxyzk/lxyzk.coding.me.git
   branch: master
