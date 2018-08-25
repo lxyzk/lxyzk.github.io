@@ -28,7 +28,7 @@ categories:
 
 ## 安装Docker
 
-在sell中执行
+在hsell中执行
 
 ```sh
 curl -fsSL get.docker.com -o get-docker.sh
