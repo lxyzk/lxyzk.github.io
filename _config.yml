@@ -87,7 +87,7 @@ deploy:
   repo: git@git.coding.net:lxyzk/lxyzk.coding.me.git
   branch: master
 
-   主题配置
+  #主题配置
 materialx:
   # 导航栏
   nav_menu:

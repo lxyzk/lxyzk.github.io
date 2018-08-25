@@ -1,0 +1,3 @@
+<% (config.materialx && config.materialx.widgets && (config.materialx.widgets||[]) || (theme.materialx.widgets||[])).forEach(function(name){ %>
+  <%- partial('../_widget/'+name) %>
+<% }) %>
