@@ -75,7 +75,7 @@ pagination_dir: page
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
-theme: landscape
+theme: material-x
 
 # Deployment
 ## Docs: https://hexo.io/docs/deployment.html
@@ -86,3 +86,65 @@ deploy:
 - type: git
   repo: git@git.coding.net:lxyzk/lxyzk.coding.me.git
   branch: master
+
+   主题配置
+materialx:
+  # 导航栏
+  nav_menu:
+    - name: 博客
+      slug: home
+      fa:   rss
+      url: /
+    - name: 归档
+      slug: archives
+      fa:   archive
+      url: /archives
+  # 右边的小窗口
+  widgets:
+    #- avatar # 显示个人头像，如果注释掉这一行就不显示
+    - categories # 显示分类
+    - tagcloud # 显示tags
+    #- contacts # 显示自己的联系信息
+    #- music # 显示自己的网易云歌单
+    #- links # 显示友链
+    - toc # 显示目录
+  # 网易云音乐歌单id
+  widgets_musicid:
+  # 侧边栏的友链
+  widgets_links:
+  - name: xaoxuu
+    url: https://xaoxuu.com
+  # 右边的联系信息小窗口
+  widgets_contacts:
+  - name: Email
+    desc: Email
+    url: mailto:lxyzk_sg@foxmail.com
+  - name: 10086
+    desc: 测试打电话
+    url: tel:10086
+  # 页脚
+  footer_social:
+  - slug: envelope
+    url: mailto:lxyzk_sg@foxmail.com
+  #- slug: github
+  #  url: https://github.com/xaoxuu
+  - slug: instagram
+    url:
+  - slug: google-plus
+    url:
+  - slug: twitter
+    url:
+  - slug: music
+    url:
+
+
+# 推荐文章
+recommended_posts:
+  autoDisplay: false # 自动在文章底部显示推荐文章，如果你使用Material-X主题，这里要设置为false。
+  server: https://api.truelaurel.com # 后端推荐服务器地址
+  timeoutInMillis: 10000 # 服务时长，超过此时长，则使用离线推荐模式
+  excludePattern: []
+  titleHtml: <h4>推荐文章</h4> #自定义标题
+  internalLinks: 3 # 内部文章数量
+  externalLinks: 2 # 外部文章数量
+  fixedNumber: false
