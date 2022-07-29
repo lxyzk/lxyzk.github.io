@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.1.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"lxyzk.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="什么是拥塞我们都知道计算机网络中的资源是有限的。某段时间内网络中对资源的需求超过了网络中的可用部分，而导致网络性能下降的情况就是拥塞。 通俗点说就是发送的数据包太多网络中的设备处理不过来，而导致网络性能下降的情况。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="TCP&#x2F;IP 拥塞控制">
+<meta property="og:url" content="http://lxyzk.github.io/2018/04/17/tcp-ip-congestion-control/index.html">
+<meta property="og:site_name" content="Xiangxin">
+<meta property="og:description" content="什么是拥塞我们都知道计算机网络中的资源是有限的。某段时间内网络中对资源的需求超过了网络中的可用部分，而导致网络性能下降的情况就是拥塞。 通俗点说就是发送的数据包太多网络中的设备处理不过来，而导致网络性能下降的情况。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://static.zybuluo.com/lxyzk/zxxuqcjbsq9gzyotfbfjwjrn/%E6%8B%A5%E5%A1%9E%E9%81%BF%E5%85%8D%E7%AE%97%E6%B3%95%E5%9B%BE%E8%A7%A3">
+<meta property="og:image" content="http://static.zybuluo.com/lxyzk/i6zrad1hw97f0a4okjxke7c4/%E5%BF%AB%E9%87%8D%E4%BC%A0%E5%BF%AB%E6%81%A2%E5%A4%8D">
+<meta property="article:published_time" content="2018-04-17T06:54:32.000Z">
+<meta property="article:modified_time" content="2022-07-29T16:13:55.620Z">
+<meta property="article:author" content="刘相鑫">
+<meta property="article:tag" content="tcp&#x2F;ip">
+<meta property="article:tag" content="networking">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://static.zybuluo.com/lxyzk/zxxuqcjbsq9gzyotfbfjwjrn/%E6%8B%A5%E5%A1%9E%E9%81%BF%E5%85%8D%E7%AE%97%E6%B3%95%E5%9B%BE%E8%A7%A3">
+
+
+<link rel="canonical" href="http://lxyzk.github.io/2018/04/17/tcp-ip-congestion-control/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://lxyzk.github.io/2018/04/17/tcp-ip-congestion-control/","path":"2018/04/17/tcp-ip-congestion-control/","title":"TCP/IP 拥塞控制"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>TCP/IP 拥塞控制 | Xiangxin</title>
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Xiangxin</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E6%8B%A5%E5%A1%9E"><span class="nav-number">1.</span> <span class="nav-text">什么是拥塞</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TCP%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E8%BF%9B%E8%A1%8C%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6"><span class="nav-number">2.</span> <span class="nav-text">TCP为什么要进行拥塞控制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6%E4%B8%8E%E6%B5%81%E9%87%8F%E6%8E%A7%E5%88%B6%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="nav-number">3.</span> <span class="nav-text">拥塞控制与流量控制的区别</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6%E7%9A%84%E6%96%B9%E6%B3%95"><span class="nav-number"></span> <span class="nav-text">拥塞控制的方法</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%85%A2%E5%BC%80%E5%A7%8B"><span class="nav-number">1.</span> <span class="nav-text">慢开始</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8B%A5%E5%A1%9E%E7%AA%97%E5%8F%A3"><span class="nav-number">1.1.</span> <span class="nav-text">拥塞窗口</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BC%A0%E8%BE%93%E8%BD%AE%E6%AC%A1"><span class="nav-number">1.2.</span> <span class="nav-text">传输轮次</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%85%A2%E5%BC%80%E5%A7%8B%E7%AE%97%E6%B3%95"><span class="nav-number">1.3.</span> <span class="nav-text">慢开始算法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8B%A5%E5%A1%9E%E9%81%BF%E5%85%8D"><span class="nav-number">2.</span> <span class="nav-text">拥塞避免</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%85%A2%E5%BC%80%E5%A7%8B%E9%97%A8%E9%99%90-ssthresh"><span class="nav-number">2.1.</span> <span class="nav-text">慢开始门限 ssthresh</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8B%A5%E5%A1%9E%E9%81%BF%E5%85%8D%E8%BF%87%E7%A8%8B"><span class="nav-number">2.2.</span> <span class="nav-text">拥塞避免过程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BF%AB%E9%87%8D%E4%BC%A0"><span class="nav-number">3.</span> <span class="nav-text">快重传</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BF%AB%E6%81%A2%E5%A4%8D"><span class="nav-number">4.</span> <span class="nav-text">快恢复</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TCP%E7%9A%84%E5%8F%91%E9%80%81%E7%AA%97%E5%8F%A3%E5%88%B0%E5%BA%95%E6%98%AF%E5%A4%9A%E5%A4%A7"><span class="nav-number">5.</span> <span class="nav-text">TCP的发送窗口到底是多大</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">刘相鑫</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">10</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://lxyzk.github.io/2018/04/17/tcp-ip-congestion-control/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="刘相鑫">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Xiangxin">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="TCP/IP 拥塞控制 | Xiangxin">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          TCP/IP 拥塞控制
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2018-04-17 14:54:32" itemprop="dateCreated datePublished" datetime="2018-04-17T14:54:32+08:00">2018-04-17</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-07-30 00:13:55" itemprop="dateModified" datetime="2022-07-30T00:13:55+08:00">2022-07-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/networking/" itemprop="url" rel="index"><span itemprop="name">networking</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h2 id="什么是拥塞"><a href="#什么是拥塞" class="headerlink" title="什么是拥塞"></a>什么是拥塞</h2><p>我们都知道计算机网络中的资源是有限的。某段时间内网络中对资源的需求超过了网络中的可用部分，而导致网络性能下降的情况就是<strong>拥塞</strong>。</p>
+<p>通俗点说就是发送的数据包太多网络中的设备处理不过来，而导致网络性能下降的情况。</p>
+<span id="more"></span>
+
+<h2 id="TCP为什么要进行拥塞控制"><a href="#TCP为什么要进行拥塞控制" class="headerlink" title="TCP为什么要进行拥塞控制"></a>TCP为什么要进行拥塞控制</h2><p>网络中的路由器会有一个数据包处理队列，当路由器接收到的数据包太多而一下子处理不过来时，就会导致数据包处理队列过长。此时，路由器就会无条件的丢弃新接收到的数据封包。</p>
+<p>这就会导致上层的TCP协议以为数据包在网络中丢失，进而重传这些数据包，而路由器又会丢弃这些重传的数据包，如此以往，就会导致网络性能急剧下降，引起网络瘫痪。</p>
+<p>因此，TCP需要控制数据包发送的数量来避免网络性能的下降。</p>
+<h2 id="拥塞控制与流量控制的区别"><a href="#拥塞控制与流量控制的区别" class="headerlink" title="拥塞控制与流量控制的区别"></a>拥塞控制与流量控制的区别</h2><p>引用书上的答案：</p>
+<blockquote>
+<ul>
+<li><strong>拥塞控制</strong>就是防止过多的数据注入到网络中，这样可以防止网络中的路由器或链路不致过载。拥塞控制所要做的都有一个前提，就是网络能够承受现有的网络负荷。拥塞控制是一个全局性的过程，涉及到所有的主机、所有的路由器，以及与降低网络传输性能有关的所有因素。</li>
+<li><strong>流量控制</strong>往往指点对点通信量的控制，是个端到端的问题。流量控制所要做的就是抑制发送端发送数据的速率，以便使接收端来得及接收。</li>
+</ul>
+</blockquote>
+<h1 id="拥塞控制的方法"><a href="#拥塞控制的方法" class="headerlink" title="拥塞控制的方法"></a>拥塞控制的方法</h1><h2 id="慢开始"><a href="#慢开始" class="headerlink" title="慢开始"></a>慢开始</h2><h3 id="拥塞窗口"><a href="#拥塞窗口" class="headerlink" title="拥塞窗口"></a>拥塞窗口</h3><p>拥塞窗口（cwnd）是指发送方维护的一个根据网络状况动态变化的窗口。一般来说，发送方会让自己的发送窗口等于拥塞窗口的大小。</p>
+<blockquote>
+<p>如果考虑到流量控制的话，发送窗口也有可能小于拥塞窗口的大小。</p>
+</blockquote>
+<h3 id="传输轮次"><a href="#传输轮次" class="headerlink" title="传输轮次"></a>传输轮次</h3><p>一个传输轮次是指发送方把自己的发送窗口内的数据全部发送出去并收到对最后一个字节的确认。</p>
+<p>例如，A将自己的发送窗口内的数据全部连续发送给了B，而B收到这些数据后向A发送了对这些数据的确认，A收到这个确认后，一个传输轮次就算是完成了。</p>
+<h3 id="慢开始算法"><a href="#慢开始算法" class="headerlink" title="慢开始算法"></a>慢开始算法</h3><p>慢开始算法中的主要方法就是有小到大逐渐增大发送窗口。</p>
+<p>那么，具体是怎么增大的呢？</p>
+<p>简单来说就是每个传输轮次后将cwnd大小加倍。</p>
+<p>举个例子：</p>
+<p>首先，发送方设置cwnd&#x3D;1（为方便理解，这里用报文段的个数作为窗口大小的单位），在收到接收方发来的确认后（也就是下个传输轮次），设置cwnd&#x3D;2，然后将发送窗口的数据发送出去。在一次收到接收方发来的确认后，发送方设置cwnd&#x3D;4，再讲发送窗口中的数据发送出去。然后再重复上面的过程。</p>
+<p>这里就应该清楚，<strong>慢开始</strong>算法中的<strong>慢</strong>不是说cwnd增长的<strong>慢</strong>，而是相对一下子发送大量数据而言，这种一次先发送少量的数据包的方式要<strong>慢</strong>许多。</p>
+<p>当然，cwnd的大小肯定不可能一直以这种指数的方式增长下去，要不然很快就会增长到引起网络瘫痪的程度了。</p>
+<p>所以，经过一定时间或条件，我们就要换成<strong>拥塞避免</strong>算法来发送数据。</p>
+<h2 id="拥塞避免"><a href="#拥塞避免" class="headerlink" title="拥塞避免"></a>拥塞避免</h2><h3 id="慢开始门限-ssthresh"><a href="#慢开始门限-ssthresh" class="headerlink" title="慢开始门限 ssthresh"></a>慢开始门限 ssthresh</h3><p>像上面所说，不能任由慢开始算法中的cwnd任意增长，所以我们引入一个<strong>慢开始门限（ssthresh）</strong>的阈值来控制cwnd的增长。</p>
+<p>具体作用如下：</p>
+<ul>
+<li>cwnd &lt; ssthresh ，使用慢开始算法</li>
+<li>cwnd &#x3D; ssthresh , 使用慢开始算法或拥塞避免算法都可以</li>
+<li>cwnd &gt; ssthresh , 使用拥塞避免算法呢</li>
+</ul>
+<p>还有一个问题就是这个ssthresh是怎么设置的呢？</p>
+<p>TCP&#x2F;IP中规定无论是在慢开始阶段还是在拥塞避免阶段，只要发现网络中出现拥塞（没有按时收到确认），就要把ssthresh设置为此时发送窗口的一半大小（不能小于2）。</p>
+<h3 id="拥塞避免过程"><a href="#拥塞避免过程" class="headerlink" title="拥塞避免过程"></a>拥塞避免过程</h3><p><strong>拥塞避免</strong>算法也是逐渐的增大cwnd的大小，只是采用的是线性增长而不是像<strong>慢开始</strong>算法那样的指数增长。</p>
+<p>具体来说就是每个传输轮次后将cwnd的大小加一（加法增大），如果发现出现网络拥塞的话就按照上面的方法重新设置<strong>ssthresh</strong>的大小（乘法减小）并从cwnd&#x3D;1开始重新执行<strong>慢开始</strong>算法。</p>
+<p>如下面的图片所示：</p>
+<p><img src="http://static.zybuluo.com/lxyzk/zxxuqcjbsq9gzyotfbfjwjrn/%E6%8B%A5%E5%A1%9E%E9%81%BF%E5%85%8D%E7%AE%97%E6%B3%95%E5%9B%BE%E8%A7%A3" alt="拥塞避免算法图解"></p>
+<p>（图片来源于网络）</p>
+<h2 id="快重传"><a href="#快重传" class="headerlink" title="快重传"></a>快重传</h2><p>前面复习到过，TCP的可靠传输的原理就是<strong>超时重传</strong>机制。配合上面的<strong>慢开始</strong>和<strong>拥塞避免</strong>使用就是发送发发送完数据后设置一个定时器，如果在定时器时间内没有收到对接收方发来的确认的话就去执行上述的<strong>乘法减小</strong>过程并重新开始<strong>慢开始</strong>算法。</p>
+<p>而<strong>快重传</strong>则是允许发送方再连续收到3个重复的确认后就可以开始执行<strong>乘法减小</strong>过程而不必再等待所设置的重传计时器到时。</p>
+<p>这就需要接收方没收到一个<strong>失序的报文段</strong>就立即发出重复确认以让发送发及早知道有报文段丢失，而不是等待自己发送数据的时候进行捎带确认。</p>
+<h2 id="快恢复"><a href="#快恢复" class="headerlink" title="快恢复"></a>快恢复</h2><p><strong>快恢复算法</strong>是与<strong>快重传算法</strong>配合使用的一个算法。</p>
+<p>使用了<strong>快恢复算法</strong>后与原来不同的一点是当发现网络出现拥塞并执行了<strong>乘法减小</strong>过程后，并不是设置cwnd&#x3D;1并重新开始执行<strong>慢开始</strong>算法，而是让cwnd&#x3D;<strong>乘法减小</strong>后的<strong>ssthresh</strong>并开始执行<strong>拥塞避免</strong>算法。</p>
+<p>因为此时发送发能连续接收到三个重复的确认就可以认为此时网络很可能没有发生拥塞。</p>
+<p>使用了<strong>快重传</strong>和<strong>快恢复</strong>的拥塞避免过程如下：</p>
+<p><img src="http://static.zybuluo.com/lxyzk/i6zrad1hw97f0a4okjxke7c4/%E5%BF%AB%E9%87%8D%E4%BC%A0%E5%BF%AB%E6%81%A2%E5%A4%8D" alt="快重传快恢复"></p>
+<p>（图片来源于网络）</p>
+<h2 id="TCP的发送窗口到底是多大"><a href="#TCP的发送窗口到底是多大" class="headerlink" title="TCP的发送窗口到底是多大"></a>TCP的发送窗口到底是多大</h2><p>发送窗口的上限值 &#x3D; Min{rwnd, cwnd}</p>
+<p>rwnd：接收方接收窗口<br>cwnd：发送方拥塞窗口</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/tcp-ip/" rel="tag"># tcp/ip</a>
+              <a href="/tags/networking/" rel="tag"># networking</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2018/04/16/first-post/" rel="prev" title="First Post">
+                  <i class="fa fa-chevron-left"></i> First Post
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2018/04/17/tcp-ip-note/" rel="next" title="TCP/IP 笔记">
+                  TCP/IP 笔记 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">刘相鑫</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

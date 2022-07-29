@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.1.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"lxyzk.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="最近又重温了TCP&#x2F;IP的知识，果然比第一次看的时候有感悟多了，那就写一点东西来总结一下。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="TCP&#x2F;IP 笔记">
+<meta property="og:url" content="http://lxyzk.github.io/2018/04/17/tcp-ip-note/index.html">
+<meta property="og:site_name" content="Xiangxin">
+<meta property="og:description" content="最近又重温了TCP&#x2F;IP的知识，果然比第一次看的时候有感悟多了，那就写一点东西来总结一下。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://static.zybuluo.com/lxyzk/bfmo5pfpdp8olbc0bjacyyad/UDP%E5%A4%B4%E9%83%A8%E6%A0%BC%E5%BC%8F.PNG">
+<meta property="og:image" content="http://static.zybuluo.com/lxyzk/d4hc6uj75kixb0yq1odxc35b/TCP%E6%95%B0%E6%8D%AE%E5%8C%85%E6%A0%BC%E5%BC%8F.PNG">
+<meta property="og:image" content="http://static.zybuluo.com/lxyzk/fk384ptm9shlrofn0l6yci33/Connection_TCP.png">
+<meta property="og:image" content="http://static.zybuluo.com/lxyzk/q53umfysakatjhb3zuurezvj/Deconnection_TCP.png">
+<meta property="og:image" content="http://static.zybuluo.com/lxyzk/tf4dbqv6gqm0lqj4069t2n82/TCP_DataFlow.PNG">
+<meta property="article:published_time" content="2018-04-17T07:02:07.000Z">
+<meta property="article:modified_time" content="2022-07-29T16:13:55.620Z">
+<meta property="article:author" content="刘相鑫">
+<meta property="article:tag" content="tcp&#x2F;ip">
+<meta property="article:tag" content="networking">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://static.zybuluo.com/lxyzk/bfmo5pfpdp8olbc0bjacyyad/UDP%E5%A4%B4%E9%83%A8%E6%A0%BC%E5%BC%8F.PNG">
+
+
+<link rel="canonical" href="http://lxyzk.github.io/2018/04/17/tcp-ip-note/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://lxyzk.github.io/2018/04/17/tcp-ip-note/","path":"2018/04/17/tcp-ip-note/","title":"TCP/IP 笔记"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>TCP/IP 笔记 | Xiangxin</title>
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Xiangxin</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BD%91%E7%BB%9C%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">网络模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#UDP%E4%B8%8ETCP%E5%8D%8F%E8%AE%AE"><span class="nav-number">2.</span> <span class="nav-text">UDP与TCP协议</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#UDP%E5%8D%8F%E8%AE%AE"><span class="nav-number">2.1.</span> <span class="nav-text">UDP协议</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%89%B9%E7%82%B9"><span class="nav-number">2.1.1.</span> <span class="nav-text">特点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8A%A5%E6%96%87%E6%A0%BC%E5%BC%8F"><span class="nav-number">2.1.2.</span> <span class="nav-text">报文格式</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TCP%E5%8D%8F%E8%AE%AE"><span class="nav-number">2.2.</span> <span class="nav-text">TCP协议</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%89%B9%E7%82%B9-1"><span class="nav-number">2.2.1.</span> <span class="nav-text">特点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%B0%81%E5%8C%85%E6%A0%BC%E5%BC%8F"><span class="nav-number">2.2.2.</span> <span class="nav-text">数据封包格式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%B6%85%E6%97%B6%E9%87%8D%E4%BC%A0"><span class="nav-number">2.2.3.</span> <span class="nav-text">超时重传</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#TCP%E8%BF%9E%E6%8E%A5%E7%AE%A1%E7%90%86"><span class="nav-number">2.2.4.</span> <span class="nav-text">TCP连接管理</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E4%B8%AA%E6%95%B0%E6%8D%AE%E5%8C%85%E7%9A%84%E6%97%85%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">一个数据包的旅程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="nav-number">4.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">刘相鑫</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">10</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://lxyzk.github.io/2018/04/17/tcp-ip-note/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="刘相鑫">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Xiangxin">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="TCP/IP 笔记 | Xiangxin">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          TCP/IP 笔记
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2018-04-17 15:02:07" itemprop="dateCreated datePublished" datetime="2018-04-17T15:02:07+08:00">2018-04-17</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-07-30 00:13:55" itemprop="dateModified" datetime="2022-07-30T00:13:55+08:00">2022-07-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/networking/" itemprop="url" rel="index"><span itemprop="name">networking</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>最近又重温了TCP&#x2F;IP的知识，果然比第一次看的时候有感悟多了，那就写一点东西来总结一下。</p>
+<span id="more"></span>
+
+<h2 id="网络模型"><a href="#网络模型" class="headerlink" title="网络模型"></a>网络模型</h2><p>现在我们主要了解计算机网络的两种模型：OSI模型和TCP&#x2F;IP模型。需要注意的是由于OSI模型过于复杂导致难以实现，因此导致TCP&#x2F;IP模型更早地应用在现实中。这也使得TCP&#x2F;IP模型成为事实上的标准，而OSI仅仅是纸面上的标准。</p>
+<p>在OSI模型中，将计算机网络分成了7层，而在TCP&#x2F;IP模型中则分成了4层，其各层对应关系如下表所示：</p>
+<table>
+    <tr>
+        <td>OSI</td>
+        <td>TCP/IP</td>
+        <td>对应网络协议</td>
+        <td>所在位置</td>
+    </tr>
+    <tr>
+        <td>应用层</td>
+        <td rowspan="3">应用层</td>
+        <td>TFTP, FTP, NFS, WAIS</td>
+        <td rowspan="4">主机</td>
+    </tr>
+    <tr>
+        <td>表示层</td>
+        <td>Telnet, Rlogin, SNMP, Gopher</td>
+    </tr>
+    <tr>
+        <td>会话层</td>
+        <td>SMTP, DNS</td>
+    </tr>
+    <tr>
+        <td>传输层</td>
+        <td>传输层</td>
+        <td>TCP, UDP</td>
+    </tr>
+    <tr>
+        <td>网络层</td>
+        <td>网际层</td>
+        <td>IP, ICMP, ARP, RARP, AKP, UUCP</td>
+        <td rowspan="3">媒介</td>
+    </tr>
+    <tr>
+        <td>数据链路层</td>
+        <td rowspan="2">网络接口层</td>
+        <td>FDDI, Ethernet, Arpanet, PDN, SLIP, PPP</td>
+    </tr>
+    <tr>
+        <td>物理层</td>
+        <td>IEEE 802.1A, IEEE 802.2到IEEE 802.11</td>
+    </tr>
+</table>
+
+
+<h2 id="UDP与TCP协议"><a href="#UDP与TCP协议" class="headerlink" title="UDP与TCP协议"></a>UDP与TCP协议</h2><p>在整个计算机网络体系中，最核心的当属是位于传输层的TCP与UDP协议了。因为他们位于主机协议栈的最底层，向上方应用层提供不同的数据交付方式。</p>
+<p>因为UDP协议相对TCP协议来说相对简单，就先回顾一下UDP协议。</p>
+<h3 id="UDP协议"><a href="#UDP协议" class="headerlink" title="UDP协议"></a>UDP协议</h3><h4 id="特点"><a href="#特点" class="headerlink" title="特点"></a>特点</h4><p>UDP的全称也叫做用户数据报协议（User Datagram Protocal），它有以下几个值得注意的特点：</p>
+<ol>
+<li>UDP不能保证可靠传输，也就更不能保证所发送的数据的到达顺序，它所实现的是尽最大的努力交付。</li>
+<li>UDP是面向数据报文的、无连接的协议，因此它的开销低并且发送器前的时延小（因为不用建立连接啊），面向报文也使得IP层在传输UDP协议的报文时既不会拆分也不会合并。</li>
+<li>UDP可以支持一对一、一对多、多对一、多对多的通信。</li>
+<li>UDP没有拥塞控制功能，它的发送速率不会随着网络出现的拥塞而降低，所以它的实时性较好。这也是许多视频聊天应用采用它的原因。</li>
+</ol>
+<h4 id="报文格式"><a href="#报文格式" class="headerlink" title="报文格式"></a>报文格式</h4><p>如下是UDP报文头部格式<br><img src="http://static.zybuluo.com/lxyzk/bfmo5pfpdp8olbc0bjacyyad/UDP%E5%A4%B4%E9%83%A8%E6%A0%BC%E5%BC%8F.PNG" alt="UDP头部格式"></p>
+<p>其中从1到8字节分别是来源端口号、目的端口号、报文长度、检验和，每个字段各占两字节。</p>
+<p>UDP的通信方式较为简单，发送端发送完一个报文继续发送下一个，待将所有报文发送完毕通信就结束了。</p>
+<p>接收方也是如此。</p>
+<h3 id="TCP协议"><a href="#TCP协议" class="headerlink" title="TCP协议"></a>TCP协议</h3><p>传输控制协议（英语：Transmission Control Protocol，缩写为 TCP）是一种面向连接的、可靠的、基于字节流的传输层通信协议。</p>
+<p>TCP协议所要实现的功能是端到端之间的可靠传输，因此，相较于UDP协议而言，TCP协议要复杂的多。</p>
+<h4 id="特点-1"><a href="#特点-1" class="headerlink" title="特点"></a>特点</h4><p>相对于UDP协议，TCP协议有下面的几个特点：</p>
+<ol>
+<li>TCP协议保证可靠传输，也就是说发送的数据是什么样，接收的数据也是什么样。</li>
+<li>TCP协议是有连接的、面向数据流的协议。有连接是说数据传送前通信双方需要建立连接、通信完毕后需要断开连接，不过这里所提到的连接都是逻辑上的连接。面向数据流的意思是说发送方应用程序发送的数据是什么顺序，接收方应用读取的接收到的数据也是什么顺序。</li>
+<li>TCP协议提供的是端到端的通信，也就是说一条TCP连接只能提供一对一的通信。不过，一个应用可以同时建立多条TCP连接来实现与多个目标的通信。</li>
+<li>TCP协议提供拥塞控制功能，会在网络状况良好的情况下适当提高发送&#x2F;接收速率，反之则适当降低发送&#x2F;接收速率。这样，将会提高对网络的利用率。</li>
+</ol>
+<p>此外，还需要注意的是，TCP提供的是<strong>全双工</strong>的通信。</p>
+<h4 id="数据封包格式"><a href="#数据封包格式" class="headerlink" title="数据封包格式"></a>数据封包格式</h4><p>要理解TCP协议中各功能的实现，要先从TCP的数据封包结构开始。</p>
+<p>下面的图片就是TCP数据封包的结构示意图：</p>
+<p><img src="http://static.zybuluo.com/lxyzk/d4hc6uj75kixb0yq1odxc35b/TCP%E6%95%B0%E6%8D%AE%E5%8C%85%E6%A0%BC%E5%BC%8F.PNG" alt="TCP数据包格式"></p>
+<p>各个字段功能如下：</p>
+<ol>
+<li>来源端口（2字节）：标识来源端口号。</li>
+<li>目的端口（2字节）：标识目的端口号。</li>
+<li>序列号码（4字节）：表明此封包在字节流中的顺序号。因为TCP是面向字节流的协议，需要保证最终的数据顺序与发送方发送的顺序一致，所以需要这个字段来表明该封包在字节流中的位置。</li>
+<li>确认号码（4字节）：对此前按顺序收到的最后一个封包的序列号码的确认。<br>例如：当<strong>33</strong>号以前的封包都已经完整的到达了后，就向发送方发送确认号码为<strong>34</strong>（确认的封包号码+1）来告诉发送方：33号以前的所有封包我都已经收到了，可以向我发送34号封包了。<br>这里要注意： 如果收到了34、35、37号封包而未收到36号封包，则向发送端发送确认号为35的封包。<blockquote>
+<p>总之要记住，确认号&#x3D;N，表示N-1及其之前的封包都已经收到。</p>
+</blockquote>
+</li>
+<li>报头长度（1字节）：指示报文头部的长度。<br>但是需要注意，这里的单位是<strong>4字节</strong>。例如，这个属性的值是15的话则说明报文头部的长度是60(15*4)字节。</li>
+<li>保留字段(10位)：暂时没打算好干啥用，一律置0。</li>
+<li>标识符（6位）：每个比特位分别表示如下标识符：<br>URG—为1表示高优先级数据包，紧急指针字段有效。<br>ACK—为1表示确认号字段有效。TCP规定连接建立后，所有传送的报文段都必须把该字段置为1。<br>PSH—为1表示是带有PUSH标志的数据，指示接收方应该尽快将这个报文段交给应用层而不用等待缓冲区装满。<br>RST—为1表示出现严重差错。可能需要重现创建TCP连接。还可以用于拒绝非法的报文段和拒绝连接请求。<br>SYN—为1表示这是连接请求或是连接接受请求，用于创建连接和使顺序号同步<br>FIN—为1表示发送方没有数据要传输了，要求释放连接。</li>
+<li>窗口（2字节）:表示从确认号开始，本报文的源方可以接收的字节数，即源方接收窗口大小。用于流量控制。</li>
+<li>校验和（2字节）对整个的TCP报文段，包括TCP头部和TCP数据，以16位字进行计算所得。这是一个强制性的字段。</li>
+<li>紧急指针（2字节）：本报文段中的紧急数据的最后一个字节的序号。</li>
+<li>选项字段（最多40字节）：每个选项的开始是1字节的kind字段，说明选项的类型。</li>
+</ol>
+<p> 其中上面的3、4、7、8是重点。</p>
+<h4 id="超时重传"><a href="#超时重传" class="headerlink" title="超时重传"></a>超时重传</h4><p>为了搞明白下面要说的TCP的一些机制，首先需要知道TCP协议能够实现可靠传输的一个基本的原理–超时重传。</p>
+<p>说来很简单，其实就是收到当接收方收到一个数据封包的时候就向发送方发送一个确认数据封包。而当发送方发送完一个数据封包经过一段时间没有收到接收方的确认封包时，就会将上一个封包再次向接收方发送一次。</p>
+<p>当然，TCP中真正的机制比这个要复杂的多，但是基于的原理都是一样的。</p>
+<h4 id="TCP连接管理"><a href="#TCP连接管理" class="headerlink" title="TCP连接管理"></a>TCP连接管理</h4><p>在说TCP连接之前先插播一个小故事。</p>
+<blockquote>
+<p>说是有一天，一个程序员到酒吧去喝酒，于是跟服务员之间发生了如下的对话。<br>程序员：我要一瓶酒。<br>服务员：你确定你要一瓶酒？<br>程序员：我确定我要一瓶酒。<br>于是服务员就给了程序员一瓶酒。</p>
+</blockquote>
+<p>是不是很罗嗦？没错，这就是典型的TCP连接建立的过程。如下面的图：</p>
+<p><img src="http://static.zybuluo.com/lxyzk/fk384ptm9shlrofn0l6yci33/Connection_TCP.png" alt="Connection_TCP"></p>
+<p>图中的小人就是客户端，另一边不用说也知道就是服务器端。图中画的比较简略，大概过程是下面这样：</p>
+<blockquote>
+<p>下面过程中，ACK表示上面说的TCP包头中的确认标识，ack表示确认号(4字节那个)。</p>
+</blockquote>
+<ol>
+<li>客户端向服务器发送建立连接请求数据包，其中包头内容SYN&#x3D;1，seq&#x3D;x（自己随机挑选的起始序号）。（我要一瓶酒）</li>
+<li>服务器收到请求后，如果同意建立连接，就向客户端发送同意建立连接请求数据封包，其包头内容SYN&#x3D;1,ACK&#x3D;1,ack&#x3D;x+1(还记得为什么吗),seq&#x3D;y（同样也是自己随机挑选的）。（你确定你要一瓶酒吗）</li>
+<li>客户端收到服务器发来的确认请求后，也向服务器发送确认封包，其内容ACK&#x3D;1，ack&#x3D;y+1(原理同上),seq&#x3D;x+1（毕竟已经发送过seq&#x3D;x的封包了），随后客户端就进入连接建立状态，而服务器就在收到这个确认封包后也进入连接建立状态。（我确定我要一瓶酒）</li>
+</ol>
+<p>以上步骤就是俗称的“TCP三次握手”。</p>
+<p>当然，最初的时候服务器肯定是处于监听状态啦，要不然怎么能够对客户端的数据封包做出回应呢。</p>
+<p>要注意的是，这里有个很经典的问题就是为什么在收到服务器的确认封包后还要再向服务器发送一个确认封包呢？</p>
+<p>这主要是因为TCP协议的下层网络是不可靠的，也就是说数据封包可能丢失也可能滞留在某个节点很长时间。</p>
+<p>所以这就有一种可能就是客户端发送给服务器的封包在网络中滞留了，这样客户端当然也就不会收到服务器发来的确认封包。还记得TCP有个超时重传机制吗？没错，这个时候客户端是以为自己发出去的封包在网络中是丢了的，于是过一段时间又会重传刚才的封包。</p>
+<p>幸运的是，这次重传的封包十分顺利的到达了服务器，于是服务器也十分顺利的向客户端发出了确认封包。本来就要愉快的建立连接了，可是天有不测风云，刚才滞留的请求封包此时到达了服务器这里。</p>
+<p>这个时候服务器就懵了，这到底是客户端又要跟我建立一次连接还是刚才滞留的封包又给了我呢？</p>
+<p>于是这个时候就需要客户端再发送一个确认封包给服务器了。</p>
+<p>当然，有连接建立，就有连接释放，客户端与服务器之间的连接释放过程大概是下面这个样子的。</p>
+<p><img src="http://static.zybuluo.com/lxyzk/q53umfysakatjhb3zuurezvj/Deconnection_TCP.png" alt="Deconnection_TCP"></p>
+<p>跟建立连接的时候差不多，大概过程大概向下面这样：</p>
+<ol>
+<li>客户端向服务器发送连接请求释放封包，封包内容为FIN&#x3D;1，seq&#x3D;u。</li>
+<li>服务器收到后，决定要跟客户端释放连接，可是还有数据没传送完啊，就先发一个封包告诉客户端我可以释放连接，你可以不用向我发送数据了，可是我还有数据没有传送完，所以在我告诉你结束之前你得一直接收我的数据（别忘了，TCP可是全双工的）。所以所发送封包内容为：ACK&#x3D;1，ack&#x3D;u+1,seq&#x3D;v。（FIN&#x3D;0表示我还有数据要发送）</li>
+<li>服务器发送完数据后，告诉客户端我都发送完了，可以结束了。于是发送封包为FIN&#x3D;1，ACK&#x3D;1，ack&#x3D;u+1(这里得注意啦)，seq&#x3D;w（中间还传输过数据，所以可能不是v+1）。</li>
+<li>客户端收到服务器的确认后，再次向服务器发送确认，内容是ACK&#x3D;1，ack&#x3D;w+1，seq&#x3D;u+1。</li>
+<li>发送完上面的确认封包后，客户端再等一段时间（2MSL）后，就断开连接。至此，连接正常释放。</li>
+</ol>
+<p>如上步骤就是俗称的“TCP4次挥手”。</p>
+<p>这里之所以是4次，主要是与建立连接时相比，服务器的确认和结束被分成了两个封包分别发送了出去。</p>
+<p>当然，这里也有个比较经典的问题就是客户端为什么在发送完最后一个封包后还要再等待一段时间？</p>
+<p>这里也主要是因为TCP协议下层的网络并不是很可靠，有可能客户端发出的最后一个封包在路上丢了而导致服务器等待很长世间浪费服务器资源。于是就让客户端再等待一段时间，这样当服务器收不到客户端发来的确认封包时，还会再重传一个连接结束封包，此时的客户端再次受到这个连接结束封包后还可以再重传一次确认封包来让服务器正常结束连接。这样，就不会白白浪费服务器资源了。</p>
+<h2 id="一个数据包的旅程"><a href="#一个数据包的旅程" class="headerlink" title="一个数据包的旅程"></a>一个数据包的旅程</h2><p>最后，再从整个网络的范围来看，一个数据封包到底是要经过怎样的旅程才会从出发地到达目的地呢？</p>
+<p>以TCP协议为例，当TCP协议接到上层应用层交付下来的数据封包后，就在这个数据封包的前面加上TCP的头部。</p>
+<p>然后，再交付给下层的网络层。</p>
+<p>网络层接收到上层传输层传递下来的封包后，就在封包的头部加上IP协议的头部和网际接口层的首部和头部后经过层层路由，最终到达距离目的主机最近的路由器。</p>
+<p>然后距离目的主机最近的路由器再对数据包进行解包，去掉网际接口层和网络层的封装后将数据包送到目的主机的传输层（TCP接收缓冲池），再由目的主机的传输层交给上层的应用层。</p>
+<p>一图以蔽之：</p>
+<p><img src="http://static.zybuluo.com/lxyzk/tf4dbqv6gqm0lqj4069t2n82/TCP_DataFlow.PNG" alt="TCP_DataFlow.PNG"></p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><p><a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/TCP/IP%E5%8D%8F%E8%AE%AE%E6%97%8F">维基百科-TCP&#x2F;IP协议簇</a><br><a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E6%8A%A5%E5%8D%8F%E8%AE%AE">维基百科-用户数据报协议</a><br><a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/%E4%BC%A0%E8%BE%93%E6%8E%A7%E5%88%B6%E5%8D%8F%E8%AE%AE">维基百科-传输控制协议</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/tcp-ip/" rel="tag"># tcp/ip</a>
+              <a href="/tags/networking/" rel="tag"># networking</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2018/04/17/tcp-ip-congestion-control/" rel="prev" title="TCP/IP 拥塞控制">
+                  <i class="fa fa-chevron-left"></i> TCP/IP 拥塞控制
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2018/08/25/raspberry-pi-aria/" rel="next" title="在树莓派上配置下载机">
+                  在树莓派上配置下载机 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">刘相鑫</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

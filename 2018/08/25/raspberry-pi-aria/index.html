@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.1.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"lxyzk.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="最近看美剧，为了专心享受美剧的快乐避免烦人的下载保存， 想到了把手头的一个树莓派和一个移动硬盘配置成下载机。 这样，客厅的小米盒子就可以通过局域网直接播放下载完的视频。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="在树莓派上配置下载机">
+<meta property="og:url" content="http://lxyzk.github.io/2018/08/25/raspberry-pi-aria/index.html">
+<meta property="og:site_name" content="Xiangxin">
+<meta property="og:description" content="最近看美剧，为了专心享受美剧的快乐避免烦人的下载保存， 想到了把手头的一个树莓派和一个移动硬盘配置成下载机。 这样，客厅的小米盒子就可以通过局域网直接播放下载完的视频。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2018-08-25T14:16:14.000Z">
+<meta property="article:modified_time" content="2022-07-29T16:13:55.620Z">
+<meta property="article:author" content="刘相鑫">
+<meta property="article:tag" content="Raspberry">
+<meta property="article:tag" content="Aria2">
+<meta property="article:tag" content="Docker">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://lxyzk.github.io/2018/08/25/raspberry-pi-aria/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://lxyzk.github.io/2018/08/25/raspberry-pi-aria/","path":"2018/08/25/raspberry-pi-aria/","title":"在树莓派上配置下载机"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>在树莓派上配置下载机 | Xiangxin</title>
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Xiangxin</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A1%AC%E4%BB%B6%E5%87%86%E5%A4%87"><span class="nav-number">1.</span> <span class="nav-text">硬件准备</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%89%E8%A3%85Docker"><span class="nav-number">2.</span> <span class="nav-text">安装Docker</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E5%AD%98%E5%82%A8%E7%9B%AE%E5%BD%95"><span class="nav-number">3.</span> <span class="nav-text">配置存储目录</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BB%BA%E7%AB%8B%E4%B8%8B%E8%BD%BD%E7%9B%AE%E5%BD%95"><span class="nav-number">3.1.</span> <span class="nav-text">建立下载目录</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8C%82%E8%BD%BD%E7%A7%BB%E5%8A%A8%E7%A1%AC%E7%9B%98"><span class="nav-number">3.2.</span> <span class="nav-text">挂载移动硬盘</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%85%8D%E7%BD%AEAria2"><span class="nav-number">4.</span> <span class="nav-text">配置Aria2</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%89%E8%A3%85%E9%95%9C%E5%83%8F"><span class="nav-number">4.1.</span> <span class="nav-text">安装镜像</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%85%8D%E7%BD%AESMB%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="nav-number">5.</span> <span class="nav-text">配置SMB服务器</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">刘相鑫</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">10</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://lxyzk.github.io/2018/08/25/raspberry-pi-aria/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="刘相鑫">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Xiangxin">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="在树莓派上配置下载机 | Xiangxin">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          在树莓派上配置下载机
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2018-08-25 22:16:14" itemprop="dateCreated datePublished" datetime="2018-08-25T22:16:14+08:00">2018-08-25</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-07-30 00:13:55" itemprop="dateModified" datetime="2022-07-30T00:13:55+08:00">2022-07-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%8A%98%E8%85%BE/" itemprop="url" rel="index"><span itemprop="name">折腾</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>最近看美剧，为了专心享受美剧的快乐避免烦人的下载保存，</p>
+<p>想到了把手头的一个树莓派和一个移动硬盘配置成下载机。</p>
+<p>这样，客厅的小米盒子就可以通过局域网直接播放下载完的视频。</p>
+<span id="more"></span>
+
+<h2 id="硬件准备"><a href="#硬件准备" class="headerlink" title="硬件准备"></a>硬件准备</h2><ol>
+<li><p>把移动硬盘插到树莓派上, 在树莓派中是<code>/dev/sda1</code></p>
+</li>
+<li><p>通过网线将树莓派连接到路由器上</p>
+</li>
+<li><p>在路由器的DHCP配置中将树莓派的IP配置为固定IP:<strong>192.168.31.121</strong></p>
+</li>
+</ol>
+<h2 id="安装Docker"><a href="#安装Docker" class="headerlink" title="安装Docker"></a>安装Docker</h2><p>在shell中执行</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl -fsSL get.docker.com -o get-docker.sh</span><br><span class="line">sudo sh get-docker.sh --mirror Aliyun</span><br></pre></td></tr></table></figure>
+
+<h2 id="配置存储目录"><a href="#配置存储目录" class="headerlink" title="配置存储目录"></a>配置存储目录</h2><h3 id="建立下载目录"><a href="#建立下载目录" class="headerlink" title="建立下载目录"></a>建立下载目录</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">cd ~</span><br><span class="line">mkdir nas</span><br><span class="line">cd nas </span><br><span class="line">mkdir part0</span><br></pre></td></tr></table></figure>
+
+<h3 id="挂载移动硬盘"><a href="#挂载移动硬盘" class="headerlink" title="挂载移动硬盘"></a>挂载移动硬盘</h3><p>在<code>/etc/fstable</code>中添加下面的一行</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/dev/sda1   /home/pi/nas/part0/     ext4    defaults    0   2</span><br></pre></td></tr></table></figure>
+
+<p>在shell中执行</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mount -a</span><br></pre></td></tr></table></figure>
+
+<h2 id="配置Aria2"><a href="#配置Aria2" class="headerlink" title="配置Aria2"></a>配置<code>Aria2</code></h2><h3 id="安装镜像"><a href="#安装镜像" class="headerlink" title="安装镜像"></a>安装镜像</h3><p>建立配置文件目录</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cd ~</span><br><span class="line">mkdir aria2-conf</span><br></pre></td></tr></table></figure>
+
+<p>启动镜像</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">docker run -d --name aria2-ariang-pi \</span><br><span class="line">-p 6800:6800 -p 80:80 -p 8080:8080 \</span><br><span class="line">-v /home/pi/nas/part0:/aria2/downloads \</span><br><span class="line">-v /home/pi/aria2-conf:/aria2/conf \</span><br><span class="line">-e SECRET=123 huangzulin/aria2-ariang-pi #RPC服务认证密码</span><br></pre></td></tr></table></figure>
+
+<p>执行完毕后，在浏览器输入</p>
+<p><a target="_blank" rel="noopener" href="http://192.168.31.121/">http://192.168.31.121</a> 访问<code>Aria-Ng</code>的前端页面</p>
+<p><a target="_blank" rel="noopener" href="http://192.168.31.121:8080/">http://192.168.31.121:8080</a> 访问文件管理</p>
+<blockquote>
+<p>如果提示连接错误，到<code>AriaNg Setting</code> - <code>RPC</code>选项卡中将<code>Aria2 RPC Secret Token</code>设置为上面的<code>123</code></p>
+</blockquote>
+<h2 id="配置SMB服务器"><a href="#配置SMB服务器" class="headerlink" title="配置SMB服务器"></a>配置SMB服务器</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">sudo docker run -it -p 139:139 -p 445:445 \</span><br><span class="line">       -p 137:137/udp \</span><br><span class="line">       -p 138:138/udp \</span><br><span class="line">       -v  /home/pi/nas/part0:/downloads \</span><br><span class="line">       -d --name=&quot;samba&quot; dperson/samba:rpi \</span><br><span class="line">       -u &quot;pi;pi&quot; \ #用户名:密码</span><br><span class="line">       -s &quot;downloads;/downloads;yes;no;no;all;pi&quot;  # 显示名称;映射路径,跟 第四行后面的/downloads对应</span><br><span class="line">       -g &quot;extensions = no&quot; \</span><br><span class="line">       -n \</span><br><span class="line">       -W \</span><br><span class="line">       -S </span><br></pre></td></tr></table></figure>
+
+<p>执行完后可以通过smb:&#x2F;&#x2F;192.168.31.121 访问文件服务， 并且客厅的小米盒子也可以发现并访问</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Raspberry/" rel="tag"># Raspberry</a>
+              <a href="/tags/Aria2/" rel="tag"># Aria2</a>
+              <a href="/tags/Docker/" rel="tag"># Docker</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2018/04/17/tcp-ip-note/" rel="prev" title="TCP/IP 笔记">
+                  <i class="fa fa-chevron-left"></i> TCP/IP 笔记
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2019/05/28/compile_vim_debian/" rel="next" title="Debian源码安装Vim">
+                  Debian源码安装Vim <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">刘相鑫</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

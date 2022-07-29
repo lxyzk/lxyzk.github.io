@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.1.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"lxyzk.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="问题发现最近开发时候发现了一个奇怪的问题，在使用iOS的NSURLSessionManager进行文件上传时候，回调方法 12345- (void)URLSession:(NSURLSession *)session              task:(NSURLSessionTask *)task   didSendBodyData:(int64_t)bytesSent    totalByt">
+<meta property="og:type" content="article">
+<meta property="og:title" content="URLProtocol导致上传进度回调丢失排查过程">
+<meta property="og:url" content="http://lxyzk.github.io/2020/01/02/ns-url-protocol/index.html">
+<meta property="og:site_name" content="Xiangxin">
+<meta property="og:description" content="问题发现最近开发时候发现了一个奇怪的问题，在使用iOS的NSURLSessionManager进行文件上传时候，回调方法 12345- (void)URLSession:(NSURLSession *)session              task:(NSURLSessionTask *)task   didSendBodyData:(int64_t)bytesSent    totalByt">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-01-02T05:04:34.000Z">
+<meta property="article:modified_time" content="2022-07-29T16:13:55.620Z">
+<meta property="article:author" content="刘相鑫">
+<meta property="article:tag" content="iOS">
+<meta property="article:tag" content="NSURLProtol">
+<meta property="article:tag" content="upload">
+<meta property="article:tag" content="network">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://lxyzk.github.io/2020/01/02/ns-url-protocol/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://lxyzk.github.io/2020/01/02/ns-url-protocol/","path":"2020/01/02/ns-url-protocol/","title":"URLProtocol导致上传进度回调丢失排查过程"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>URLProtocol导致上传进度回调丢失排查过程 | Xiangxin</title>
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Xiangxin</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E5%8F%91%E7%8E%B0"><span class="nav-number">1.</span> <span class="nav-text">问题发现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5"><span class="nav-number">2.</span> <span class="nav-text">问题排查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E9%97%AE%E9%A2%98"><span class="nav-number">3.</span> <span class="nav-text">解决问题</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">刘相鑫</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">10</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://lxyzk.github.io/2020/01/02/ns-url-protocol/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="刘相鑫">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Xiangxin">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="URLProtocol导致上传进度回调丢失排查过程 | Xiangxin">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          URLProtocol导致上传进度回调丢失排查过程
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-01-02 13:04:34" itemprop="dateCreated datePublished" datetime="2020-01-02T13:04:34+08:00">2020-01-02</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-07-30 00:13:55" itemprop="dateModified" datetime="2022-07-30T00:13:55+08:00">2022-07-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/iOS/" itemprop="url" rel="index"><span itemprop="name">iOS</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h2 id="问题发现"><a href="#问题发现" class="headerlink" title="问题发现"></a>问题发现</h2><p>最近开发时候发现了一个奇怪的问题，在使用iOS的<code>NSURLSessionManager</code>进行文件上传时候，回调方法</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)URLSession:(<span class="built_in">NSURLSession</span> *)session</span><br><span class="line">              task:(<span class="built_in">NSURLSessionTask</span> *)task</span><br><span class="line">   didSendBodyData:(int64_t)bytesSent</span><br><span class="line">    totalBytesSent:(int64_t)totalBytesSent</span><br><span class="line">totalBytesExpectedToSend:(int64_t)totalBytesExpectedToSend;</span><br></pre></td></tr></table></figure>
+
+<p>无论如何也不会被调用。</p>
+<span id="more"></span>
+
+<h2 id="问题排查"><a href="#问题排查" class="headerlink" title="问题排查"></a>问题排查</h2><p>尝试了各种<code>[NSURLSession uploadTaskWithRequest]</code>的写法都已失败告终。</p>
+<p>百思不得其解，为了确定是不是<code>NSURLSession</code>自身的bug自己写了一个Demo App尝试了一下，竟然可以正常回调。</p>
+<p>于是感觉可能是在某处HOOK了<code>NSURLSession</code>的API导致的问题，于是赶紧在工程里面搜索一下<code>NSURLSeesion</code>的各个类相关的方法，还是没有找到。</p>
+<p>就在问题即将要变得难搞的时候，偶然在控制台的日志里面看到有输出我发送的请求的信息，立刻就意识到可能是某个<code>URLProtocol</code>拦截了我发送的请求，于是用<code>URLProtocol</code>做关键字在工程里面搜，果然，公司的网络性能监控框架通过注册了自己的<code>URLProtocol</code>来拦截请求信息，记录请求的性能问题。</p>
+<p>于是先注释掉监控用的<code>URLProtocol</code>注册的代码，再尝试一下，果然能正常收到回调了。看来问题就是出现在这里。</p>
+<p>翻看了一下监控<code>URLProtocol</code>的代码，看起来用的也没有问题。于是只好去搜索下看看有没有其他的解决方案。</p>
+<h2 id="解决问题"><a href="#解决问题" class="headerlink" title="解决问题"></a>解决问题</h2><p>找到了苹果的一个<a target="_blank" rel="noopener" href="https://github.com/robovm/apple-ios-samples/blob/master/CustomHTTPProtocol/Read%20Me%20About%20CustomHTTPProtocol.txt">示例说明文档</a></p>
+<p>里面有一段：</p>
+<blockquote>
+<p>Similarly, there is no way for your NSURLProtocol subclass to call the NSURLConnection delegate’s -connection:needNewBodyStream: or -connection:didSendBodyData:totalBytesWritten:totalBytesExpectedToWrite: methods (<a href="">rdar:&#x2F;&#x2F;problem&#x2F;9226155</a> and <a href="">rdar:&#x2F;&#x2F;problem&#x2F;9226157</a>).  The latter is not a serious concern–it just means that your clients don’t get upload progress–but the former is a real issue.  If you’re in a situation where you might need a second copy of a request body, you will need your own logic to make that copy, including the case where the body is a stream.</p>
+</blockquote>
+<p>大意是说我们自己实例化的<code>NSURLProtocol</code>子类没有办法调用<code>client</code>的<code>-connection:didSendBodyData:totalBytesWritten:totalBytesExpectedToWrite:</code>方法，所以没有办法把进度通知到<code>client</code>，也就不会调用上面的<code>- (void)URLSession:task:didSendBodyData:totalBytesSent:totalBytesExpectedToSend:</code>方法。<br>要解决这个问题就要自己去copy请求的<code>body</code>。</p>
+<p>性能监控的<code>NSURLProtocol</code>的逻辑暂时没有办法更改，那没有办法，只有在上传的时候禁止监控了。</p>
+<p>性能监控的<code>PerformanceURLProtocol</code>的<code>canInitWithRequest</code>里面有这么一段代码：</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">+ (<span class="built_in">BOOL</span>)canInitWithRequest:(<span class="built_in">NSURLRequest</span> *)request &#123;</span><br><span class="line">    <span class="keyword">if</span> ([<span class="built_in">NSURLProtocol</span> propertyForKey:<span class="string">@&quot;PerformanceHTTPHandledIdentifier&quot;</span> inRequest:request] ) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>根据这段代码，在上传文件之前先调用一下</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Class HMDURLProtocol = <span class="built_in">NSClassFromString</span>(<span class="string">@&quot;PerformanceURLProtocol&quot;</span>);</span><br><span class="line"><span class="keyword">if</span> ([PerformanceURLProtocol isSubclassOfClass:<span class="built_in">NSURLProtocol</span>.class]) &#123;</span><br><span class="line">    [PerformanceURLProtocol setProperty:@YES forKey:<span class="string">@&quot;PerformanceHTTPHandledIdentifier&quot;</span> inRequest:request];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>防止进入<code>PerformanceURLProtocol</code>的拦截逻辑。</p>
+<p>重新运行代码， 一切正常。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/iOS/" rel="tag"># iOS</a>
+              <a href="/tags/NSURLProtol/" rel="tag"># NSURLProtol</a>
+              <a href="/tags/upload/" rel="tag"># upload</a>
+              <a href="/tags/network/" rel="tag"># network</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2019/08/11/debug-new-device-on-old-xcode/" rel="prev" title="使用Xcode10调试iOS13设备">
+                  <i class="fa fa-chevron-left"></i> 使用Xcode10调试iOS13设备
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/03/31/debian-install-space-vim/" rel="next" title="Debian配置SpaceVim">
+                  Debian配置SpaceVim <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">刘相鑫</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
