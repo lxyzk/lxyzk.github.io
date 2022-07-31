@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.1.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"lxyzk.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="简单Demo我们知道Java中提供了动态代理机制，可以动态进行代理，示例代码如下： 1234567891011121314151617181920212223242526public class ProxyFactory &amp;#123;    private Object target;    public ProxyFactory(Object target) &amp;#123;        this">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Android ART 动态代理探究">
+<meta property="og:url" content="http://lxyzk.github.io/2022/08/01/art-java-dynamic-proxy-explore/index.html">
+<meta property="og:site_name" content="Xiangxin">
+<meta property="og:description" content="简单Demo我们知道Java中提供了动态代理机制，可以动态进行代理，示例代码如下： 1234567891011121314151617181920212223242526public class ProxyFactory &amp;#123;    private Object target;    public ProxyFactory(Object target) &amp;#123;        this">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-07-31T16:41:26.000Z">
+<meta property="article:modified_time" content="2022-07-31T16:46:42.053Z">
+<meta property="article:author" content="刘相鑫">
+<meta property="article:tag" content="Java">
+<meta property="article:tag" content="Android">
+<meta property="article:tag" content="ART">
+<meta property="article:tag" content="Proxy">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://lxyzk.github.io/2022/08/01/art-java-dynamic-proxy-explore/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://lxyzk.github.io/2022/08/01/art-java-dynamic-proxy-explore/","path":"2022/08/01/art-java-dynamic-proxy-explore/","title":"Android ART 动态代理探究"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Android ART 动态代理探究 | Xiangxin</title>
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Xiangxin</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AE%80%E5%8D%95Demo"><span class="nav-number">1.</span> <span class="nav-text">简单Demo</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BA%90%E7%A0%81"><span class="nav-number">2.</span> <span class="nav-text">源码</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Proxy-newProxyInstance-Proxy-java"><span class="nav-number">2.1.</span> <span class="nav-text">Proxy.newProxyInstance [Proxy.java]</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Proxy-getProxyClass0-Proxy-java"><span class="nav-number">2.1.1.</span> <span class="nav-text">Proxy.getProxyClass0 [Proxy.java]</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#init-WeakCache"><span class="nav-number">2.1.1.1.</span> <span class="nav-text">init WeakCache</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Proxy-ProxyClassFactory-apply-Proxy-java"><span class="nav-number">2.1.2.</span> <span class="nav-text">Proxy.ProxyClassFactory.apply [Proxy.java]</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Proxy-generateProxy-java-lang-reflect-Proxy-cc"><span class="nav-number">2.1.3.</span> <span class="nav-text">Proxy_generateProxy [java_lang_reflect_Proxy.cc]</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ClassLinker-CreateProxyClass-class-linker-cc"><span class="nav-number">2.1.4.</span> <span class="nav-text">ClassLinker::CreateProxyClass [class_linker.cc]</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ClassLinker-CreateProxyMethod-class-linker-cc"><span class="nav-number">2.1.5.</span> <span class="nav-text">ClassLinker::CreateProxyMethod [class_linker.cc]</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#GetQuickproxyInvokeHandler-runtime-asm-entrypoints-h"><span class="nav-number">2.1.5.1.</span> <span class="nav-text">GetQuickproxyInvokeHandler [runtime_asm_entrypoints.h]</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#art-quick-proxy-invoke-handler-quick-entrypoints-arm64-S"><span class="nav-number">2.1.5.2.</span> <span class="nav-text">art_quick_proxy_invoke_handler [quick_entrypoints_arm64.S]</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#artQuickProxyInvokeHandler-quick-trampoline-entrypoints-cc"><span class="nav-number">2.1.5.3.</span> <span class="nav-text">artQuickProxyInvokeHandler [quick-trampoline_entrypoints.cc]</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#InvokeProxyInvocationHandler-entrypoint-utils-cc"><span class="nav-number">2.1.5.4.</span> <span class="nav-text">InvokeProxyInvocationHandler [entrypoint_utils.cc]</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Proxy-invoke-Proxy-java"><span class="nav-number">2.1.5.5.</span> <span class="nav-text">Proxy.invoke [Proxy.java]</span></a></li></ol></li></ol></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">刘相鑫</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://lxyzk.github.io/2022/08/01/art-java-dynamic-proxy-explore/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="刘相鑫">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Xiangxin">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Android ART 动态代理探究 | Xiangxin">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Android ART 动态代理探究
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2022-08-01 00:41:26 / 修改时间：00:46:42" itemprop="dateCreated datePublished" datetime="2022-08-01T00:41:26+08:00">2022-08-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Android/" itemprop="url" rel="index"><span itemprop="name">Android</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h2 id="简单Demo"><a href="#简单Demo" class="headerlink" title="简单Demo"></a>简单Demo</h2><p>我们知道Java中提供了动态代理机制，可以动态进行代理，示例代码如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">public class ProxyFactory &#123;</span><br><span class="line"></span><br><span class="line">    private Object target;</span><br><span class="line"></span><br><span class="line">    public ProxyFactory(Object target) &#123;</span><br><span class="line">        this.target = target;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // 生成动态代理对象</span><br><span class="line">    public Object getProxyInstance() &#123;</span><br><span class="line">        return Proxy.newProxyInstance(target.getClass().getClassLoader(), target.getClass().getInterfaces(),</span><br><span class="line">                new InvocationHandler() &#123;</span><br><span class="line"></span><br><span class="line">                    @Override</span><br><span class="line">                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable &#123;</span><br><span class="line">                        System.out.println(&quot;开始调用真正的方法&quot;);</span><br><span class="line"></span><br><span class="line">                        // 调用被代理对象的方法</span><br><span class="line">                        Object returnValue = method.invoke(target, args);</span><br><span class="line"></span><br><span class="line">                        System.out.println(&quot;结束调用真正的方法&quot;);</span><br><span class="line">                        return null;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>那么，动态代理在Android的ART中是怎么实现的呢？</p>
+<p>下面通过阅读代码简单探究一下。</p>
+<span id="more"></span>
+
+<h2 id="源码"><a href="#源码" class="headerlink" title="源码"></a>源码</h2><h3 id="Proxy-newProxyInstance-Proxy-java"><a href="#Proxy-newProxyInstance-Proxy-java" class="headerlink" title="Proxy.newProxyInstance [Proxy.java]"></a>Proxy.newProxyInstance [Proxy.java]</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line">@CallerSensitive</span><br><span class="line">public static Object newProxyInstance(ClassLoader loader,</span><br><span class="line">                                      Class&lt;?&gt;[] interfaces,</span><br><span class="line">                                      InvocationHandler h)</span><br><span class="line">    throws IllegalArgumentException</span><br><span class="line">&#123;</span><br><span class="line">    Objects.requireNonNull(h);</span><br><span class="line"></span><br><span class="line">    final Class&lt;?&gt;[] intfs = interfaces.clone();</span><br><span class="line">    /*</span><br><span class="line">     * Look up or generate the designated proxy class.</span><br><span class="line">     */</span><br><span class="line">    // 动态创建一个Proxy的子类，见2.1.1</span><br><span class="line">    Class&lt;?&gt; cl = getProxyClass0(loader, intfs);</span><br><span class="line"></span><br><span class="line">    /*</span><br><span class="line">     * Invoke its constructor with the designated invocation handler.</span><br><span class="line">     */</span><br><span class="line">    try &#123;</span><br><span class="line">        final Constructor&lt;?&gt; cons = cl.getConstructor(constructorParams);</span><br><span class="line">        final InvocationHandler ih = h;</span><br><span class="line">        if (!Modifier.isPublic(cl.getModifiers())) &#123;</span><br><span class="line">            cons.setAccessible(true);</span><br><span class="line">        &#125;</span><br><span class="line">        // 初始化子类，并将InvocationHandler传递过去</span><br><span class="line">        // 上面创建的Proxy子类中，已经将要代理的method的入口地址设置为了</span><br><span class="line">        // InvocationHandler.invoke()方法的入口</span><br><span class="line">        // 因此在调用cl的方法时就会调用到h.invoke()方法</span><br><span class="line">        return cons.newInstance(new Object[]&#123;h&#125;);</span><br><span class="line">    &#125; catch (IllegalAccessException|InstantiationException e) &#123;</span><br><span class="line">        throw new InternalError(e.toString(), e);</span><br><span class="line">    &#125; catch (InvocationTargetException e) &#123;</span><br><span class="line">        Throwable t = e.getCause();</span><br><span class="line">        if (t instanceof RuntimeException) &#123;</span><br><span class="line">            throw (RuntimeException) t;</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            throw new InternalError(t.toString(), t);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; catch (NoSuchMethodException e) &#123;</span><br><span class="line">        throw new InternalError(e.toString(), e);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="Proxy-getProxyClass0-Proxy-java"><a href="#Proxy-getProxyClass0-Proxy-java" class="headerlink" title="Proxy.getProxyClass0 [Proxy.java]"></a>Proxy.getProxyClass0 [Proxy.java]</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">private static Class&lt;?&gt; getProxyClass0(ClassLoader loader,</span><br><span class="line">                                       Class&lt;?&gt;... interfaces) &#123;</span><br><span class="line">    if (interfaces.length &gt; 65535) &#123;</span><br><span class="line">        throw new IllegalArgumentException(&quot;interface limit exceeded&quot;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // If the proxy class defined by the given loader implementing</span><br><span class="line">    // the given interfaces exists, this will simply return the cached copy;</span><br><span class="line">    // otherwise, it will create the proxy class via the ProxyClassFactory</span><br><span class="line">    // 如果在缓存中可以找到，直接返回</span><br><span class="line">    // 如果无法找到，调用ProxyClassFactory.apply()方法动态生成，</span><br><span class="line">    // 具体原因见2.1.1.1    </span><br><span class="line">    return proxyClassCache.get(loader, interfaces);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="init-WeakCache"><a href="#init-WeakCache" class="headerlink" title="init WeakCache"></a>init WeakCache</h5><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">private static final WeakCache&lt;ClassLoader, Class&lt;?&gt;[], Class&lt;?&gt;&gt;</span><br><span class="line">    proxyClassCache = new WeakCache&lt;&gt;(new KeyFactory(), new ProxyClassFactory());</span><br></pre></td></tr></table></figure>
+
+<h4 id="Proxy-ProxyClassFactory-apply-Proxy-java"><a href="#Proxy-ProxyClassFactory-apply-Proxy-java" class="headerlink" title="Proxy.ProxyClassFactory.apply [Proxy.java]"></a>Proxy.ProxyClassFactory.apply [Proxy.java]</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">    @Override</span><br><span class="line">    public Class&lt;?&gt; apply(ClassLoader loader, Class&lt;?&gt;[] interfaces) &#123;</span><br><span class="line"></span><br><span class="line">        Map&lt;Class&lt;?&gt;, Boolean&gt; interfaceSet = new IdentityHashMap&lt;&gt;(interfaces.length);</span><br><span class="line">        // 判断interfaces里面是否有重复的，有重复抛出异常</span><br><span class="line">        // 代码省略....</span><br><span class="line">        </span><br><span class="line">        // 判断是否non public interfaces都在同一个package中，如果不在，抛出异常</span><br><span class="line">        // 代码省略....</span><br><span class="line"></span><br><span class="line">        &#123;</span><br><span class="line">            // Android-changed: Generate the proxy directly instead of calling</span><br><span class="line">            // through to ProxyGenerator.</span><br><span class="line">            // 获取所有interface的声明方法</span><br><span class="line">            List&lt;Method&gt; methods = getMethods(interfaces);</span><br><span class="line">            Collections.sort(methods, ORDER_BY_SIGNATURE_AND_SUBTYPE);</span><br><span class="line">            validateReturnTypes(methods);</span><br><span class="line">            List&lt;Class&lt;?&gt;[]&gt; exceptions = deduplicateAndGetExceptions(methods);</span><br><span class="line"></span><br><span class="line">            Method[] methodsArray = methods.toArray(new Method[methods.size()]);</span><br><span class="line">            Class&lt;?&gt;[][] exceptionsArray = exceptions.toArray(new Class&lt;?&gt;[exceptions.size()][]);</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">             * Choose a name for the proxy class to generate.</span><br><span class="line">             */</span><br><span class="line">            long num = nextUniqueNumber.getAndIncrement();</span><br><span class="line">            String proxyName = proxyPkg + proxyClassNamePrefix + num;</span><br><span class="line">            </span><br><span class="line">            // 生成proxy对象</span><br><span class="line">            // 这是一个native方法</span><br><span class="line">            return generateProxy(proxyName, interfaces, loader, methodsArray,</span><br><span class="line">                                 exceptionsArray);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="Proxy-generateProxy-java-lang-reflect-Proxy-cc"><a href="#Proxy-generateProxy-java-lang-reflect-Proxy-cc" class="headerlink" title="Proxy_generateProxy [java_lang_reflect_Proxy.cc]"></a>Proxy_generateProxy [java_lang_reflect_Proxy.cc]</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">static jclass Proxy_generateProxy(JNIEnv* env, jclass, jstring name, jobjectArray interfaces,</span><br><span class="line">                                  jobject loader, jobjectArray methods, jobjectArray throws) &#123;</span><br><span class="line">  ScopedFastNativeObjectAccess soa(env);</span><br><span class="line">  ClassLinker* class_linker = Runtime::Current()-&gt;GetClassLinker();</span><br><span class="line">  return soa.AddLocalReference&lt;jclass&gt;(class_linker-&gt;CreateProxyClass(</span><br><span class="line">      soa, name, interfaces, loader, methods, throws));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="ClassLinker-CreateProxyClass-class-linker-cc"><a href="#ClassLinker-CreateProxyClass-class-linker-cc" class="headerlink" title="ClassLinker::CreateProxyClass [class_linker.cc]"></a>ClassLinker::CreateProxyClass [class_linker.cc]</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br></pre></td><td class="code"><pre><span class="line">ObjPtr&lt;mirror::Class&gt; ClassLinker::CreateProxyClass(ScopedObjectAccessAlreadyRunnable&amp; soa,</span><br><span class="line">                                                    jstring name,</span><br><span class="line">                                                    jobjectArray interfaces,</span><br><span class="line">                                                    jobject loader,</span><br><span class="line">                                                    jobjectArray methods,</span><br><span class="line">                                                    jobjectArray throws) &#123;</span><br><span class="line">  Thread* self = soa.Self();</span><br><span class="line"></span><br><span class="line">  //...</span><br><span class="line"></span><br><span class="line">  StackHandleScope&lt;12&gt; hs(self);</span><br><span class="line">  // 初始化一个temp_kcass</span><br><span class="line">  MutableHandle&lt;mirror::Class&gt; temp_klass(hs.NewHandle(</span><br><span class="line">      AllocClass(self, GetClassRoot&lt;mirror::Class&gt;(this), sizeof(mirror::Class))));</span><br><span class="line">  if (temp_klass == nullptr) &#123;</span><br><span class="line">    CHECK(self-&gt;IsExceptionPending());  // OOME.</span><br><span class="line">    return nullptr;</span><br><span class="line">  &#125;</span><br><span class="line">  // 给设置一堆标记位</span><br><span class="line">  // ...</span><br><span class="line"></span><br><span class="line">  // Proxies have 1 direct method, the constructor</span><br><span class="line">  const size_t num_direct_methods = 1;</span><br><span class="line"></span><br><span class="line">  // List of the actual virtual methods this class will have.</span><br><span class="line">  std::vector&lt;ArtMethod*&gt; proxied_methods;</span><br><span class="line">  </span><br><span class="line">  // 这里会有一堆逻辑进行一下过滤，把private、final、static方法给过滤掉</span><br><span class="line">  // 只留下virtual_methods，可以进行代理</span><br><span class="line">  // ...</span><br><span class="line"> </span><br><span class="line">  const size_t num_virtual_methods = proxied_methods.size();</span><br><span class="line">  // 处理throw methods</span><br><span class="line">  // ...</span><br><span class="line">  temp_klass-&gt;SetMethodsPtr(proxy_class_methods, num_direct_methods, num_virtual_methods);</span><br><span class="line"></span><br><span class="line">  // Create the single direct method.</span><br><span class="line">  CreateProxyConstructor(temp_klass, temp_klass-&gt;GetDirectMethodUnchecked(0, image_pointer_size_));</span><br><span class="line"></span><br><span class="line">  // Create virtual method using specified prototypes.</span><br><span class="line">  // TODO These should really use the iterators.</span><br><span class="line">  for (size_t i = 0; i &lt; num_virtual_methods; ++i) &#123;</span><br><span class="line">    auto* virtual_method = temp_klass-&gt;GetVirtualMethodUnchecked(i, image_pointer_size_);</span><br><span class="line">    auto* prototype = proxied_methods[i];</span><br><span class="line">    // 重点在这里，这里面会进行方法代理，见2.1.5</span><br><span class="line">    CreateProxyMethod(temp_klass, prototype, virtual_method);</span><br><span class="line">    DCHECK(virtual_method-&gt;GetDeclaringClass() != nullptr);</span><br><span class="line">    DCHECK(prototype-&gt;GetDeclaringClass() != nullptr);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  // 把父类设置为java.lang.reflect.Proxy</span><br><span class="line">  temp_klass-&gt;SetSuperClass(GetClassRoot&lt;mirror::Proxy&gt;(this));</span><br><span class="line">  // Now effectively in the loaded state.</span><br><span class="line">  mirror::Class::SetStatus(temp_klass, ClassStatus::kLoaded, self);</span><br><span class="line">  self-&gt;AssertNoPendingException();</span><br><span class="line"></span><br><span class="line">  // At this point the class is loaded. Publish a ClassLoad event.</span><br><span class="line">  // Note: this may be a temporary class. It is a listener&#x27;s responsibility to handle this.</span><br><span class="line">  Runtime::Current()-&gt;GetRuntimeCallbacks()-&gt;ClassLoad(temp_klass);</span><br><span class="line"></span><br><span class="line">  MutableHandle&lt;mirror::Class&gt; klass = hs.NewHandle&lt;mirror::Class&gt;(nullptr);</span><br><span class="line">  &#123;</span><br><span class="line">    // Must hold lock on object when resolved.</span><br><span class="line">    ObjectLock&lt;mirror::Class&gt; resolution_lock(self, temp_klass);</span><br><span class="line">    // Link the fields and virtual methods, creating vtable and iftables.</span><br><span class="line">    // The new class will replace the old one in the class table.</span><br><span class="line">    Handle&lt;mirror::ObjectArray&lt;mirror::Class&gt;&gt; h_interfaces(</span><br><span class="line">        hs.NewHandle(soa.Decode&lt;mirror::ObjectArray&lt;mirror::Class&gt;&gt;(interfaces)));</span><br><span class="line">    // 这里进行link，创建vtable和iftables</span><br><span class="line">    if (!LinkClass(self, descriptor, temp_klass, h_interfaces, &amp;klass)) &#123;</span><br><span class="line">      if (!temp_klass-&gt;IsErroneous()) &#123;</span><br><span class="line">        mirror::Class::SetStatus(temp_klass, ClassStatus::kErrorUnresolved, self);</span><br><span class="line">      &#125;</span><br><span class="line">      return nullptr;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  Runtime::Current()-&gt;GetRuntimeCallbacks()-&gt;ClassPrepare(temp_klass, klass);</span><br><span class="line"></span><br><span class="line">  VisiblyInitializedCallback* callback = nullptr;</span><br><span class="line">  &#123;</span><br><span class="line">    // Lock on klass is released. Lock new class object.</span><br><span class="line">    ObjectLock&lt;mirror::Class&gt; initialization_lock(self, klass);</span><br><span class="line">    // Conservatively go through the ClassStatus::kInitialized state.</span><br><span class="line">    callback = MarkClassInitialized(self, klass);</span><br><span class="line">  &#125;</span><br><span class="line">  if (callback != nullptr) &#123;</span><br><span class="line">    callback-&gt;MakeVisible(self);</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  return klass.Get();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="ClassLinker-CreateProxyMethod-class-linker-cc"><a href="#ClassLinker-CreateProxyMethod-class-linker-cc" class="headerlink" title="ClassLinker::CreateProxyMethod [class_linker.cc]"></a>ClassLinker::CreateProxyMethod [class_linker.cc]</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">void ClassLinker::CreateProxyMethod(Handle&lt;mirror::Class&gt; klass, ArtMethod* prototype,</span><br><span class="line">                                    ArtMethod* out) &#123;</span><br><span class="line">  // We steal everything from the prototype (such as DexCache, invoke stub, etc.) then specialize</span><br><span class="line">  // as necessary</span><br><span class="line">  DCHECK(out != nullptr);</span><br><span class="line">  out-&gt;CopyFrom(prototype, image_pointer_size_);</span><br><span class="line"></span><br><span class="line">  // Set class to be the concrete proxy class.</span><br><span class="line">  out-&gt;SetDeclaringClass(klass.Get());</span><br><span class="line"></span><br><span class="line">  // 设置一堆标记位</span><br><span class="line">  // ...</span><br><span class="line"></span><br><span class="line">  // Set the original interface method.</span><br><span class="line">  out-&gt;SetDataPtrSize(prototype, image_pointer_size_);</span><br><span class="line"></span><br><span class="line">  // At runtime the method looks like a reference and argument saving method, clone the code</span><br><span class="line">  // related parameters from this method.</span><br><span class="line">  // 将方法的入口设置为InvokeHandler的调用入口</span><br><span class="line">  out-&gt;SetEntryPointFromQuickCompiledCode(GetQuickProxyInvokeHandler());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="GetQuickproxyInvokeHandler-runtime-asm-entrypoints-h"><a href="#GetQuickproxyInvokeHandler-runtime-asm-entrypoints-h" class="headerlink" title="GetQuickproxyInvokeHandler [runtime_asm_entrypoints.h]"></a>GetQuickproxyInvokeHandler [runtime_asm_entrypoints.h]</h5><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">extern &quot;C&quot; void art_quick_proxy_invoke_handler();</span><br><span class="line">static inline const void* GetQuickProxyInvokeHandler() &#123;</span><br><span class="line">  // 返回了art_quick_proxy_invoke_handler函数指针</span><br><span class="line">  // art_quick_proxy_invoke_handler是一个汇编写的函数，以arm64为例，见2.1.5.2</span><br><span class="line">  return reinterpret_cast&lt;const void*&gt;(art_quick_proxy_invoke_handler);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="art-quick-proxy-invoke-handler-quick-entrypoints-arm64-S"><a href="#art-quick-proxy-invoke-handler-quick-entrypoints-arm64-S" class="headerlink" title="art_quick_proxy_invoke_handler [quick_entrypoints_arm64.S]"></a>art_quick_proxy_invoke_handler [quick_entrypoints_arm64.S]</h5><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">// x0寄存器保存方法名</span><br><span class="line">// x1寄存器保存了上面创建的Poxy子类</span><br><span class="line">ENTRY art_quick_proxy_invoke_handler</span><br><span class="line">    SETUP_SAVE_REFS_AND_ARGS_FRAME_WITH_METHOD_IN_X0</span><br><span class="line">    mov     x2, xSELF                   // pass Thread::Current</span><br><span class="line">    mov     x3, sp                      // pass SP</span><br><span class="line">    // 调用artQuickProxyInvokeHandler(Method *proxy_method, receiver, Thread*, SP)</span><br><span class="line">    // artQuickProxyInvokeHandler的作用是调用Proxy的invoke方法</span><br><span class="line">    // 见2.1.5.3</span><br><span class="line">    bl      artQuickProxyInvokeHandler  // (Method* proxy method, receiver, Thread*, SP)</span><br><span class="line">    ldr     x2, [xSELF, THREAD_EXCEPTION_OFFSET]</span><br><span class="line">    cbnz    x2, .Lexception_in_proxy    // success if no exception is pending</span><br><span class="line">    .cfi_remember_state</span><br><span class="line">    RESTORE_SAVE_REFS_AND_ARGS_FRAME    // Restore frame</span><br><span class="line">    REFRESH_MARKING_REGISTER</span><br><span class="line">    fmov    d0, x0                      // Store result in d0 in case it was float or double</span><br><span class="line">    ret                                 // return on success</span><br><span class="line">.Lexception_in_proxy:</span><br><span class="line">    CFI_RESTORE_STATE_AND_DEF_CFA sp, FRAME_SIZE_SAVE_REFS_AND_ARGS</span><br><span class="line">    RESTORE_SAVE_REFS_AND_ARGS_FRAME</span><br><span class="line">    DELIVER_PENDING_EXCEPTION</span><br><span class="line">END art_quick_proxy_invoke_handler</span><br></pre></td></tr></table></figure>
+
+<h5 id="artQuickProxyInvokeHandler-quick-trampoline-entrypoints-cc"><a href="#artQuickProxyInvokeHandler-quick-trampoline-entrypoints-cc" class="headerlink" title="artQuickProxyInvokeHandler [quick-trampoline_entrypoints.cc]"></a>artQuickProxyInvokeHandler [quick-trampoline_entrypoints.cc]</h5><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">extern &quot;C&quot; uint64_t artQuickProxyInvokeHandler(</span><br><span class="line">    ArtMethod* proxy_method, mirror::Object* receiver, Thread* self, ArtMethod** sp)</span><br><span class="line">    REQUIRES_SHARED(Locks::mutator_lock_) &#123;</span><br><span class="line">  //...</span><br><span class="line">  // 调用InvocationHandler的方法</span><br><span class="line">  // 见 2.1.5.4</span><br><span class="line">  JValue result = InvokeProxyInvocationHandler(soa, shorty, rcvr_jobj, interface_method_jobj, args);</span><br><span class="line">  if (soa.Self()-&gt;IsExceptionPending()) &#123;</span><br><span class="line">    if (instr-&gt;HasMethodUnwindListeners()) &#123;</span><br><span class="line">      instr-&gt;MethodUnwindEvent(self,</span><br><span class="line">                               proxy_method,</span><br><span class="line">                               0);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; else if (instr-&gt;HasMethodExitListeners()) &#123;</span><br><span class="line">    instr-&gt;MethodExitEvent(self,</span><br><span class="line">                           proxy_method,</span><br><span class="line">                           &#123;&#125;,</span><br><span class="line">                           result);</span><br><span class="line">  &#125;</span><br><span class="line">  return result.GetJ();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="InvokeProxyInvocationHandler-entrypoint-utils-cc"><a href="#InvokeProxyInvocationHandler-entrypoint-utils-cc" class="headerlink" title="InvokeProxyInvocationHandler [entrypoint_utils.cc]"></a>InvokeProxyInvocationHandler [entrypoint_utils.cc]</h5><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">JValue InvokeProxyInvocationHandler(ScopedObjectAccessAlreadyRunnable&amp; soa,</span><br><span class="line">                                    const char* shorty,</span><br><span class="line">                                    jobject rcvr_jobj,</span><br><span class="line">                                    jobject interface_method_jobj,</span><br><span class="line">                                    std::vector&lt;jvalue&gt;&amp; args) &#123;</span><br><span class="line">   //...</span><br><span class="line"></span><br><span class="line">  // Call Proxy.invoke(Proxy proxy, Method method, Object[] args).</span><br><span class="line">  jvalue invocation_args[3];</span><br><span class="line">  invocation_args[0].l = rcvr_jobj;</span><br><span class="line">  invocation_args[1].l = interface_method_jobj;</span><br><span class="line">  invocation_args[2].l = args_jobj;</span><br><span class="line">  // 在这里调用Java层的Proxy.invoke(Proxy proxy, Method method, Object[] args)</span><br><span class="line">  // 见2.1.5.5</span><br><span class="line">  jobject result =</span><br><span class="line">      soa.Env()-&gt;CallStaticObjectMethodA(WellKnownClasses::java_lang_reflect_Proxy,</span><br><span class="line">                                         WellKnownClasses::java_lang_reflect_Proxy_invoke,</span><br><span class="line">                                         invocation_args);</span><br><span class="line"></span><br><span class="line">  //...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="Proxy-invoke-Proxy-java"><a href="#Proxy-invoke-Proxy-java" class="headerlink" title="Proxy.invoke [Proxy.java]"></a>Proxy.invoke [Proxy.java]</h5><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">private static Object invoke(Proxy proxy, Method method, Object[] args) throws Throwable &#123;</span><br><span class="line">    // 转了一圈，最终回到了这里，通过这里调用了InvocationHandler.invoke()方法</span><br><span class="line">    InvocationHandler h = proxy.h;</span><br><span class="line">    return h.invoke(proxy, method, args);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>3.总结</p>
+<ol>
+<li><p><em>Proxy.newProxyInstance()</em> 方法最终会通过调用<em>generateProxy()</em> native方法通过ClassLinker来创建一个实现了传入的interface的<em>java.lang.reflect.Proxy</em>的子类并返回</p>
+</li>
+<li><p>创建的<em>Proxy</em>子类会将<em>method</em>的入口设置为调用<em>Proxy.invoke()</em> 方法入口，最终在<em>Proxy.invoke</em>中调用了<em>proxy</em>的<em>InvocationHandler</em>实例属性的<em>invoke()</em> 方法，最终调用到自己实现的<em>invoke</em>方法</p>
+</li>
+<li><p>因此在调用<em>newProxyInstance()</em> 返回的子类的方法时，会调用到传入的<em>InvocationHandler.invoke()</em> 方法，然后在invoke方法中进行代理方法的实现</p>
+</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Java/" rel="tag"># Java</a>
+              <a href="/tags/Android/" rel="tag"># Android</a>
+              <a href="/tags/ART/" rel="tag"># ART</a>
+              <a href="/tags/Proxy/" rel="tag"># Proxy</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/07/30/art-java-synchronized-expore/" rel="prev" title="synchronized实现原理探究">
+                  <i class="fa fa-chevron-left"></i> synchronized实现原理探究
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">刘相鑫</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
